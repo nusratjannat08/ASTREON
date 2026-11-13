@@ -1,0 +1,330 @@
+[
+  {
+    "id": "MSA-001",
+    "name": "Arcadia Settlement Zone",
+    "region": "Arcadia Planitia",
+    "lat": 39.3,
+    "lon": -171.4,
+    "elevation_m": -3800,
+    "slope_deg": 1.2,
+    "landing_safety": 92,
+    "terrain_suitability": 90,
+    "solar_baseline_score": 82,
+    "thermal_score": 78,
+    "communication_score": 94,
+    "scientific_water_evidence": {
+      "has_massive_slab_ice": true,
+      "radar_ice_purity_pct": 94.0,
+      "dielectric_permittivity": 3.15,
+      "grs_weh_wt_pct": 8.6,
+      "crism_hydration_index": 0.45,
+      "overburden_depth_m": 1.8,
+      "extraction_energy_kwh_kg": 0.19,
+      "summary": "MRO SHARAD shallow radar sounding exhibits uniform dielectric permittivity ~3.15, revealing vast pure glacial ice sheets 40-100m thick buried under only 1.5-2.5m of insulating regolith. Ideal for Rodriguez-style sublimation wells with minimal thermal energy input."
+    },
+    "base_capacities": {
+      "water_l": 25000,
+      "oxygen_kg": 12000,
+      "food_kg": 15000,
+      "energy_kwh": 18000,
+      "habitat_crew": 24
+    },
+    "geological_context": "Vast, flat smooth volcanic plains in northern lowlands. Excellent Entry, Descent, and Landing (EDL) atmospheric column for deceleration.",
+    "pros": [
+      "Vast pure subsurface ice sheets at accessible depth (< 2 m)",
+      "Ultra-low surface slope (< 1.5°) minimizes landing touchdown rollover risk",
+      "Low elevation (-3.8 km) provides thicker atmospheric braking column"
+    ],
+    "cons": [
+      "Mid-latitude (39.3° N) experiences significant winter solar insolation decline",
+      "Subject to autumn/winter frost accumulation"
+    ]
+  },
+  {
+    "id": "MSA-002",
+    "name": "Utopia Deep Ice Oasis",
+    "region": "Utopia Planitia",
+    "lat": 44.8,
+    "lon": 116.5,
+    "elevation_m": -4200,
+    "slope_deg": 1.5,
+    "landing_safety": 90,
+    "terrain_suitability": 88,
+    "solar_baseline_score": 76,
+    "thermal_score": 74,
+    "communication_score": 91,
+    "scientific_water_evidence": {
+      "has_massive_slab_ice": true,
+      "radar_ice_purity_pct": 88.0,
+      "dielectric_permittivity": 3.25,
+      "grs_weh_wt_pct": 9.2,
+      "crism_hydration_index": 0.50,
+      "overburden_depth_m": 2.2,
+      "extraction_energy_kwh_kg": 0.22,
+      "summary": "SHARAD radar detection of an enormous underground frozen water body exceeding 14,300 cubic km (volume comparable to Lake Superior). High GRS epithermal neutron suppression confirms thick near-surface water-equivalent hydrogen."
+    },
+    "base_capacities": {
+      "water_l": 30000,
+      "oxygen_kg": 14000,
+      "food_kg": 14000,
+      "energy_kwh": 16000,
+      "habitat_crew": 20
+    },
+    "geological_context": "Deep impact basin in the Martian northern plains; Viking 2 and Zhurong operational sector.",
+    "pros": [
+      "Immense water reservoir capability for multi-decade human colonization",
+      "Very deep elevation (-4.2 km) maximises aerodynamic payload mass limits",
+      "Extensive scientific validation from orbital sounding and surface landers"
+    ],
+    "cons": [
+      "Higher northern latitude (44.8° N) requires auxiliary nuclear/storage power during winter",
+      "Surface pebble and polygon patterned ground requires site grading"
+    ]
+  },
+  {
+    "id": "MSA-003",
+    "name": "Jezero Delta Research Station",
+    "region": "Nili Planum / Jezero Crater",
+    "lat": 18.38,
+    "lon": 77.58,
+    "elevation_m": -2500,
+    "slope_deg": 3.8,
+    "landing_safety": 78,
+    "terrain_suitability": 80,
+    "solar_baseline_score": 93,
+    "thermal_score": 85,
+    "communication_score": 92,
+    "scientific_water_evidence": {
+      "has_massive_slab_ice": false,
+      "radar_ice_purity_pct": 0.0,
+      "dielectric_permittivity": 6.8,
+      "grs_weh_wt_pct": 4.2,
+      "crism_hydration_index": 0.88,
+      "overburden_depth_m": 0.2,
+      "extraction_energy_kwh_kg": 0.82,
+      "summary": "CRISM hyperspectral mapping confirms rich smectite clays, carbonate minerals, and polyhydrated sulfates within the ancient river delta and crater floor. Low free ice; water must be thermally extracted from crystal lattice bonds via high-temperature regolith reactor."
+    },
+    "base_capacities": {
+      "water_l": 14000,
+      "oxygen_kg": 11000,
+      "food_kg": 16000,
+      "energy_kwh": 22000,
+      "habitat_crew": 18
+    },
+    "geological_context": "Ancient lacustrine lake and delta system explored in-situ by NASA's Mars 2020 Perseverance rover.",
+    "pros": [
+      "Unrivaled astrobiological and geological scientific return",
+      "Near-equatorial (18.4° N) provides high, stable solar irradiance all year",
+      "Comprehensive ground-truth data from Perseverance rover and RIMFAX ground-penetrating radar"
+    ],
+    "cons": [
+      "Water is mineral-bound; requires significant thermal processing energy (0.82 kWh/kg)",
+      "Crater rim and delta scarp present slope and boulder hazards during landing"
+    ]
+  },
+  {
+    "id": "MSA-004",
+    "name": "Elysium Spaceport & Logistics Hub",
+    "region": "Elysium Planitia",
+    "lat": 4.5,
+    "lon": 135.9,
+    "elevation_m": -2600,
+    "slope_deg": 0.8,
+    "landing_safety": 96,
+    "terrain_suitability": 95,
+    "solar_baseline_score": 95,
+    "thermal_score": 89,
+    "communication_score": 96,
+    "scientific_water_evidence": {
+      "has_massive_slab_ice": false,
+      "radar_ice_purity_pct": 0.0,
+      "dielectric_permittivity": 7.5,
+      "grs_weh_wt_pct": 2.6,
+      "crism_hydration_index": 0.22,
+      "overburden_depth_m": 15.0,
+      "extraction_energy_kwh_kg": 1.35,
+      "summary": "InSight lander geophysical site. High dielectric permittivity and seismic data indicate dense, dry fractured basaltic lavas with minimal free shallow ice. Water extraction is highly energy intensive, but the site serves as the premier Mars transportation and spaceport hub."
+    },
+    "base_capacities": {
+      "water_l": 10000,
+      "oxygen_kg": 12000,
+      "food_kg": 18000,
+      "energy_kwh": 26000,
+      "habitat_crew": 30
+    },
+    "geological_context": "Smooth, flat, low-relief volcanic plains near Mars' equator; home of NASA InSight geophysical station.",
+    "pros": [
+      "Highest landing safety rating on Mars (>95%); virtually rock-free touchdown ellipse",
+      "Equatorial solar power generation is exceptionally consistent year-round",
+      "Ideal location for primary rocket landing pads and trans-Mars logistics"
+    ],
+    "cons": [
+      "Very low local water resource potential; requires water transport from high-latitude ice hubs",
+      "Requires advanced atmospheric moisture harvesting or deep drilling"
+    ]
+  },
+  {
+    "id": "MSA-005",
+    "name": "Melas Chasma Canyon Biosphere",
+    "region": "Valles Marineris",
+    "lat": -9.8,
+    "lon": -76.4,
+    "elevation_m": -5200,
+    "slope_deg": 4.5,
+    "landing_safety": 72,
+    "terrain_suitability": 75,
+    "solar_baseline_score": 86,
+    "thermal_score": 92,
+    "communication_score": 80,
+    "scientific_water_evidence": {
+      "has_massive_slab_ice": false,
+      "radar_ice_purity_pct": 20.0,
+      "dielectric_permittivity": 5.2,
+      "grs_weh_wt_pct": 7.2,
+      "crism_hydration_index": 0.76,
+      "overburden_depth_m": 1.2,
+      "extraction_energy_kwh_kg": 0.48,
+      "summary": "Deepest chasma of Valles Marineris. CRISM identifies extensive hydrated sulfates, opal-rich deposits, and candidate recurrent slope lineae (RSL). Highest surface atmospheric pressure on Mars (~1.1 kPa) reduces radiation dose and habitat structural stress."
+    },
+    "base_capacities": {
+      "water_l": 20000,
+      "oxygen_kg": 15000,
+      "food_kg": 14000,
+      "energy_kwh": 19000,
+      "habitat_crew": 20
+    },
+    "geological_context": "Massive tectonic rift canyon system; sheltered canyon microclimate with enhanced atmospheric density.",
+    "pros": [
+      "Highest atmospheric pressure on Mars (-5.2 km depth), granting natural cosmic ray shielding",
+      "Higher daytime temperatures and reduced diurnal swings",
+      "Diverse mineral hydration resources along alluvial fan deposits"
+    ],
+    "cons": [
+      "Steep canyon walls introduce shadow factors and localized cliff wind shear",
+      "Orbital relay communication windows are constrained by 5 km canyon walls"
+    ]
+  },
+  {
+    "id": "MSA-006",
+    "name": "Mawrth Vallis Ancient Clay Outpost",
+    "region": "Mawrth Vallis / Oxia Planum border",
+    "lat": 23.99,
+    "lon": -18.96,
+    "elevation_m": -2200,
+    "slope_deg": 2.2,
+    "landing_safety": 84,
+    "terrain_suitability": 86,
+    "solar_baseline_score": 90,
+    "thermal_score": 83,
+    "communication_score": 91,
+    "scientific_water_evidence": {
+      "has_massive_slab_ice": false,
+      "radar_ice_purity_pct": 5.0,
+      "dielectric_permittivity": 5.8,
+      "grs_weh_wt_pct": 6.8,
+      "crism_hydration_index": 0.92,
+      "overburden_depth_m": 0.5,
+      "extraction_energy_kwh_kg": 0.62,
+      "summary": "Spectacular stratigraphy of thick phyllosilicate clays (nontronite, montmorillonite, and hydrated kaolinite) exposed across hundreds of square kilometers. Provides both water via moderate thermal desorption and rich clay ceramics for habitat construction."
+    },
+    "base_capacities": {
+      "water_l": 18000,
+      "oxygen_kg": 13000,
+      "food_kg": 15000,
+      "energy_kwh": 21000,
+      "habitat_crew": 22
+    },
+    "geological_context": "One of the oldest catastrophic outflow channels on Mars, preserving pristine Noachian aqueous history.",
+    "pros": [
+      "Thickest exposed clay hydration deposits on Mars (CRISM score 0.92)",
+      "Excellent local regolith sintering and 3D print habitat construction properties",
+      "Favorable mid-low latitude solar illumination"
+    ],
+    "cons": [
+      "Requires mechanical crushing and thermal calcination plant for water yield",
+      "Moderate elevation (-2.2 km) provides lower atmospheric deceleration than northern basins"
+    ]
+  },
+  {
+    "id": "MSA-007",
+    "name": "Deuteronilus Glacial Colony",
+    "region": "Deuteronilus Mensae",
+    "lat": 43.9,
+    "lon": 23.7,
+    "elevation_m": -2800,
+    "slope_deg": 3.1,
+    "landing_safety": 81,
+    "terrain_suitability": 82,
+    "solar_baseline_score": 77,
+    "thermal_score": 73,
+    "communication_score": 89,
+    "scientific_water_evidence": {
+      "has_massive_slab_ice": true,
+      "radar_ice_purity_pct": 91.0,
+      "dielectric_permittivity": 3.20,
+      "grs_weh_wt_pct": 8.9,
+      "crism_hydration_index": 0.40,
+      "overburden_depth_m": 1.4,
+      "extraction_energy_kwh_kg": 0.20,
+      "summary": "Prominent Lobate Debris Aprons (LDAs) confirmed by SHARAD to be debris-covered alpine glaciers. Relict glacial ice exceeds 85% purity beneath 1-2m of protective rocky talus, providing easily mined fresh water ice in sheltered valley floors."
+    },
+    "base_capacities": {
+      "water_l": 28000,
+      "oxygen_kg": 14000,
+      "food_kg": 13000,
+      "energy_kwh": 17000,
+      "habitat_crew": 20
+    },
+    "geological_context": "Fretted terrain of flat-topped mesas and wide valleys transitioning between the southern highlands and northern lowlands.",
+    "pros": [
+      "True mountain glacier ice reserves protected from sublimating into atmosphere",
+      "Mesa cliffs provide micro-meteoroid and radiation deflection zones",
+      "Very low water extraction energy footprint (0.20 kWh/kg)"
+    ],
+    "cons": [
+      "Rocky talus debris requires bulldozing before Rodriguez well installation",
+      "High latitude solar reduction during northern winter"
+    ]
+  },
+  {
+    "id": "MSA-008",
+    "name": "Gale Crater Science Base",
+    "region": "Aeolis Mons / Gale Crater",
+    "lat": -4.59,
+    "lon": 137.44,
+    "elevation_m": -4500,
+    "slope_deg": 2.4,
+    "landing_safety": 87,
+    "terrain_suitability": 85,
+    "solar_baseline_score": 94,
+    "thermal_score": 87,
+    "communication_score": 93,
+    "scientific_water_evidence": {
+      "has_massive_slab_ice": false,
+      "radar_ice_purity_pct": 0.0,
+      "dielectric_permittivity": 6.4,
+      "grs_weh_wt_pct": 3.9,
+      "crism_hydration_index": 0.72,
+      "overburden_depth_m": 0.4,
+      "extraction_energy_kwh_kg": 0.74,
+      "summary": "Investigated by Curiosity rover for over a decade. Contains continuous sequence from clay-bearing bedrock to hydrated magnesium sulfates (epsomite) and gypsum veins. Deep negative elevation allows high landing payload mass."
+    },
+    "base_capacities": {
+      "water_l": 15000,
+      "oxygen_kg": 12000,
+      "food_kg": 16000,
+      "energy_kwh": 24000,
+      "habitat_crew": 22
+    },
+    "geological_context": "Vast impact crater with 5 km central mound (Mount Sharp) exposing layered sedimentary strata spanning Martian geologic epochs.",
+    "pros": [
+      "Extensive 12+ year in-situ environmental dataset from Curiosity's REMS weather station",
+      "Very low elevation (-4.5 km) grants excellent EDL atmospheric braking",
+      "Near-equatorial (-4.6° S) ensures peak year-round solar energy generation"
+    ],
+    "cons": [
+      "Water is bound in sulfate minerals; requires moderate baking energy",
+      "Active dune fields (Bagnold Dunes) require sand mitigation around landing zones"
+    ]
+  }
+]
