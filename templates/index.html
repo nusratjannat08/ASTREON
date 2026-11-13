@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASTREON | Mars Mission Site Intelligence Platform</title>
+    <!-- Fonts (bundled locally: works with no network) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fonts/fonts.css') }}">
+    <!-- Leaflet CSS (bundled locally) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet.css') }}" />
+    <!-- Main Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="theme-mars-dark">
+
+    <!-- TOP TELEMETRY BAR -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="brand-logo">
+                <span class="logo-orb"></span>
+                <span class="brand-title">ASTREON</span>
+            </div>
+            <div class="brand-tagline">Mars Settlement Site Intelligence & Mission Life Support Platform</div>
+        </div>
+
+        <div class="topbar-center">
+            <div class="telemetry-pill">
+                <span class="pill-label" title="Season currently loaded in the simulators (not today's real season)">SIM SEASON:</span>
+                <span id="topSeasonLs" class="pill-val highlight">Ls 180°</span>
+            </div>
+            <div class="telemetry-pill">
+                <span class="pill-label" title="Coordinated Mars Time (Mars prime-meridian mean solar time), computed locally">MTC:</span>
+                <span id="topSolClock" class="pill-val text-cyan">--:--:--</span>
+            </div>
+            <div class="telemetry-pill runway-pill" onclick="switchGroup('crisis')">
+                <span class="pill-label">SURVIVAL RUNWAY:</span>
+                <span id="topRunwayPill" class="pill-val highlight text-emerald">CALCULATING...</span>
+            </div>
+        </div>
+
+        <div class="topbar-right">
+            <div id="nasaStatusPill" class="status-badge checking" onclick="refreshNasaStatus(true)" title="Click to re-check the NASA data link">
+                <span class="status-dot"></span>
+                <span id="nasaStatusText">NASA LINK: CHECKING…</span>
+            </div>
+            <button class="btn-ghost-sm" onclick="openHabitatModal()" title="One habitat definition used by every module">🏠 HABITAT: <span id="habitatSummary">--</span></button>
+            <button class="btn-ghost-sm" onclick="openNasaModal()">⚙ NASA KEY</button>
+        </div>
+    </header>
+
+    <!-- NAVIGATION: 4 mission stages, each with sub-views.
+         Sticks to the top when scrolling; compacts on scroll-down, expands on scroll-up. -->
+    <div id="navShell" class="nav-shell">
+    <nav id="navBar" class="nav-tabs">
+        <div class="nav-row nav-primary">
+            <span class="nav-brand-mini" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top"><span class="logo-orb"></span>ASTREON</span>
+            <button class="nav-group-btn active" data-group="base" onclick="switchGroup('base')">
+                <span class="tab-num">01</span><span class="tab-text">Choose a Base</span>
+            </button>
+            <button class="nav-group-btn" data-group="stress" onclick="switchGroup('stress')">
+                <span class="tab-num">02</span><span class="tab-text">Stress Test</span>
+            </button>
+            <button class="nav-group-btn nav-group-crisis" data-group="crisis" onclick="switchGroup('crisis')">
+                <span class="tab-num">03</span><span class="tab-text">Crisis Mode</span><span class="badge-pulse">OFFLINE AI</span>
+            </button>
+            <button class="nav-group-btn" data-group="link" onclick="switchGroup('link')">
+                <span class="tab-num">04</span><span class="tab-text">Data &amp; Earth Link</span>
+            </button>
+        </div>
+        <div class="nav-row nav-sub" id="navSub">
+            <button class="tab-btn active" data-group="base" data-tab="tab-evaluator" onclick="switchTab('tab-evaluator')">Site Ranking</button>
+            <button class="tab-btn" data-group="base" data-tab="tab-map" onclick="switchTab('tab-map')">Mars Map</button>
+            <button class="tab-btn" data-group="base" data-tab="tab-water" onclick="switchTab('tab-water')">Water Evidence</button>
+            <button class="tab-btn" data-group="stress" data-tab="tab-cascade" onclick="switchTab('tab-cascade')">Compound Cascade</button>
+            <button class="tab-btn" data-group="stress" data-tab="tab-monitor" onclick="switchTab('tab-monitor')">Solar &amp; Power (one sol)</button>
+            <button class="tab-btn" data-group="stress" data-tab="tab-food" onclick="switchTab('tab-food')">Food Rationing</button>
+            <button class="tab-btn" data-group="crisis" data-tab="tab-crisis" onclick="switchTab('tab-crisis')">Crisis Assessment</button>
+            <button class="tab-btn" data-group="link" data-tab="tab-comm" onclick="switchTab('tab-comm')">Earth Link (DTN)</button>
+            <button class="tab-btn" data-group="link" data-tab="tab-nasa" onclick="switchTab('tab-nasa')">NASA Data Sources</button>
+            <span class="nav-sub-hint" id="navSubHint"></span>
+        </div>
+            <span class="nav-mini-status">
+                <span id="miniRunway" class="mini-pill" onclick="switchGroup('crisis')">RUNWAY --</span>
+                <span id="miniLink" class="mini-pill" onclick="switchGroup('link')">EARTH --</span>
+            </span>
+    </nav>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <main class="app-container">
+
+        <!-- ============================================================== -->
+        <!-- TAB 01: MISSION EVALUATOR & CANDIDATE SITE RANKING -->
+        <!-- ============================================================== -->
+        <section id="tab-evaluator" class="tab-content active">
+            <div class="grid-layout-sidebar">
+                <!-- Left Control Panel -->
+                <div class="panel control-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <span class="section-tag">MISSION PROFILE INPUTS</span>
+                            <h2>Colonization Parameters</h2>
+                        </div>
+                    </div>
+
+                    <div class="form-group-row">
+                        <div class="input-block">
+                            <label for="inputCrew">Crew Size (Astronauts)</label>
+                            <input id="inputCrew" type="number" min="1" max="100" value="6" onchange="runMissionAnalysis()">
+                            <span class="input-hint">NASA ECLSS crew sizing</span>
+                        </div>
+                        <div class="input-block">
+                            <label for="inputDays">Mission Duration (Sols)</label>
+                            <input id="inputDays" type="number" min="10" max="180" value="60" onchange="runMissionAnalysis()">
+                            <span class="input-hint">Also the storm-test horizon</span>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="section-subtitle">
+                        <span>MULTI-CRITERIA DECISION WEIGHTS (MCDA)</span>
+                        <button class="btn-micro" onclick="resetDefaultWeights()">Reset</button>
+                    </div>
+
+                    <div class="weight-control">
+                        <div class="weight-label-row">
+                            <span>Scientific Water Evidence</span>
+                            <span id="valWeightWater" class="weight-val">24%</span>
+                        </div>
+                        <input id="weightWater" type="range" min="0" max="60" value="24" oninput="updateWeightDisplay()" onchange="runMissionAnalysis()">
+                    </div>
+
+                    <div class="weight-control">
+                        <div class="weight-label-row">
+                            <span>Solar Illumination Potential</span>
+                            <span id="valWeightSolar" class="weight-val">16%</span>
+                        </div>
+                        <input id="weightSolar" type="range" min="0" max="60" value="16" oninput="updateWeightDisplay()" onchange="runMissionAnalysis()">
+                    </div>
+
+                    <div class="weight-control">
+                        <div class="weight-label-row">
+                            <span>Landing & EDL Safety</span>
+                            <span id="valWeightLanding" class="weight-val">18%</span>
+                        </div>
+                        <input id="weightLanding" type="range" min="0" max="60" value="18" oninput="updateWeightDisplay()" onchange="runMissionAnalysis()">
+                    </div>
+
+                    <div class="weight-control">
+                        <div class="weight-label-row">
+                            <span>Terrain Flatness & Elevation</span>
+                            <span id="valWeightTerrain" class="weight-val">12%</span>
+                        </div>
+                        <input id="weightTerrain" type="range" min="0" max="60" value="12" oninput="updateWeightDisplay()" onchange="runMissionAnalysis()">
+                    </div>
+
+                    <div class="weight-control">
+                        <div class="weight-label-row">
+                            <span>Thermal / Radiation Shielding</span>
+                            <span id="valWeightTemp" class="weight-val">8%</span>
+                        </div>
+                        <input id="weightTemp" type="range" min="0" max="60" value="8" oninput="updateWeightDisplay()" onchange="runMissionAnalysis()">
+                    </div>
+
+                    <div class="weight-control">
+                        <div class="weight-label-row">
+                            <span>Earth & DSN Line-of-Sight Relay</span>
+                            <span id="valWeightComm" class="weight-val">7%</span>
+                        </div>
+                        <input id="weightComm" type="range" min="0" max="60" value="7" oninput="updateWeightDisplay()" onchange="runMissionAnalysis()">
+                    </div>
+
+                    <div class="weight-control">
+                        <div class="weight-label-row">
+                            <span>Dust-Storm Resilience <small class="text-cyan">(simulated)</small></span>
+                            <span id="valWeightResilience" class="weight-val">15%</span>
+                        </div>
+                        <input id="weightResilience" type="range" min="0" max="60" value="15" oninput="updateWeightDisplay()" onchange="runMissionAnalysis()">
+                    </div>
+                    <p class="input-hint" style="margin-top:4px;">Water, solar and resilience are computed by ASTREON's models. Landing, terrain, thermal and comms scores are assigned in the site data file.</p>
+
+                    <div class="divider"></div>
+
+                    <div class="section-subtitle"><span>SAFETY CONSTRAINTS / FILTERS</span></div>
+                    <div class="form-group-row">
+                        <div class="input-block">
+                            <label for="filterMaxSlope">Max Landing Slope (°)</label>
+                            <input id="filterMaxSlope" type="number" min="1" max="15" step="0.5" value="5.0" onchange="runMissionAnalysis()">
+                        </div>
+                        <div class="input-block">
+                            <label for="filterMinWater">Min Water Score (0-100)</label>
+                            <input id="filterMinWater" type="number" min="0" max="100" value="30" onchange="runMissionAnalysis()">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary-action" onclick="runMissionAnalysis()">
+                        <span>EVALUATE & RANK SETTLEMENT SITES</span>
+                        <span class="btn-arrow">→</span>
+                    </button>
+
+                    <div class="data-provenance-callout">
+                        <div class="callout-icon">ℹ</div>
+                        <div class="callout-body">
+                            <strong>Scientific Provenance:</strong> Water potential is derived from MRO SHARAD shallow radar, Odyssey GRS hydrogen spectrometry, and CRISM mineral hydration, replacing legacy arbitrary scores.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Results Section -->
+                <div class="results-container">
+                    <!-- Featured Best Site Spotlight -->
+                    <div id="bestSiteSpotlight" class="best-site-spotlight">
+                        <div class="spotlight-loading">Calculating multi-criteria mission scores...</div>
+                    </div>
+
+                    <!-- Ranked Candidate Zone Cards Grid -->
+                    <div class="results-header">
+                        <h3>Ranked Candidate Settlement Zones</h3>
+                        <div class="filter-summary" id="rankedSummary">Comparing candidate zones across Mars</div>
+                    </div>
+                    <div id="rankedSiteCards" class="site-cards-grid"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- TAB 02: MARS PLANETARY SURFACE MAP -->
+        <!-- ============================================================== -->
+        <section id="tab-map" class="tab-content">
+            <div class="panel map-panel">
+                <div class="map-controls-bar">
+                    <div class="map-title-block">
+                        <h2>Mars Surface Cartographic Intelligence</h2>
+                        <p>MGS/MOLA colourised shaded-relief basemap (blue = low, red/white = high), bundled locally for offline use. Markers show each candidate's MCDA suitability.</p>
+                    </div>
+                    <div class="map-legend">
+                        <span class="legend-item"><span class="legend-dot dot-optimal"></span> High Suitability (>80%)</span>
+                        <span class="legend-item"><span class="legend-dot dot-moderate"></span> Viable (65-80%)</span>
+                        <span class="legend-item"><span class="legend-dot dot-caution"></span> High Resource Constraints (<65%)</span>
+                    </div>
+                </div>
+
+                <div id="marsMapCanvas" class="mars-map-canvas"></div>
+
+                <div class="map-infobar">
+                    <div class="infobar-item">
+                        <span class="info-k">Selected Zone:</span>
+                        <span id="mapSelectedName" class="info-v highlight">--</span>
+                    </div>
+                    <div class="infobar-item">
+                        <span class="info-k">Coordinates:</span>
+                        <span id="mapSelectedCoords" class="info-v">--</span>
+                    </div>
+                    <div class="infobar-item">
+                        <span class="info-k">MOLA Elevation:</span>
+                        <span id="mapSelectedElev" class="info-v">--</span>
+                    </div>
+                    <div class="infobar-item">
+                        <span class="info-k">Scientific Water:</span>
+                        <span id="mapSelectedWater" class="info-v text-cyan">--</span>
+                    </div>
+                    <button class="btn-accent-sm" onclick="navigateToMonitorForSelected()">MONITOR THIS ZONE →</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- TAB 03: CONTINUOUS SOLAR & DUST RISK MONITOR -->
+        <!-- ============================================================== -->
+        <section id="tab-monitor" class="tab-content">
+            <div class="monitor-dashboard">
+                <!-- Monitor Top Control Toolbar -->
+                <div class="panel monitor-toolbar">
+                    <div class="toolbar-zone-select">
+                        <label for="monitorSiteSelect">Monitoring Zone:</label>
+                        <select id="monitorSiteSelect" onchange="onMonitorSiteChange()">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="toolbar-control">
+                        <label for="monitorLsSlider">Martian Season (Solar Longitude Ls: <span id="monitorLsDisplay" class="text-orange">180°</span>):</label>
+                        <input id="monitorLsSlider" type="range" min="0" max="360" step="5" value="180" oninput="onMonitorParamChange()">
+                    </div>
+
+                    <div class="toolbar-control">
+                        <label for="monitorHourSlider">Sol Local Time (<span id="monitorHourDisplay" class="text-cyan">12:00</span>):</label>
+                        <input id="monitorHourSlider" type="range" min="0" max="24" step="0.5" value="12" oninput="onMonitorParamChange()">
+                    </div>
+
+                    <div class="toolbar-control">
+                        <label for="monitorScenarioSelect">Atmospheric Dust Scenario:</label>
+                        <select id="monitorScenarioSelect" onchange="onMonitorParamChange()">
+                            <option value="clear">Nominal Clear Sky (τ = 0.4)</option>
+                            <option value="regional">Regional Dust Storm (τ = 1.6)</option>
+                            <option value="global_pede" selected>Planet-Encircling Storm [PEDE] (τ = 4.5)</option>
+                            <option value="winter_haze">Winter Polar Twilight & Haze (τ = 1.1)</option>
+                        </select>
+                    </div>
+
+                    <div class="toolbar-actions">
+                        <button class="btn-primary-action compact" onclick="launchCascadeFromMonitor()" title="Simulate how this dust storm cascades across power, water, O2, food, and crew survival">⚡ SIMULATE COMPOUND CASCADE</button>
+                    </div>
+                </div>
+
+                <!-- Live Metrics KPI Cards -->
+                <div class="kpi-cards-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-head">SURFACE INSOLATION</div>
+                        <div class="kpi-body">
+                            <span id="kpiFlux" class="kpi-val text-yellow">--</span>
+                            <span class="kpi-unit">W/m²</span>
+                        </div>
+                        <div id="kpiFluxDetail" class="kpi-foot">Direct: -- | Diffuse: --</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-head">DAILY PV GENERATION</div>
+                        <div class="kpi-body">
+                            <span id="kpiDailyKwh" class="kpi-val text-cyan">--</span>
+                            <span class="kpi-unit">kWh/sol</span>
+                        </div>
+                        <div id="kpiDailyMargin" class="kpi-foot">Habitat Demand: 295.8 kWh</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-head">ENERGY RELIABILITY</div>
+                        <div class="kpi-body">
+                            <span id="kpiReliability" class="kpi-val text-green">--</span>
+                            <span class="kpi-unit">%</span>
+                        </div>
+                        <div id="kpiReliabilityStatus" class="kpi-foot">Power Margin: --</div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-head">BATTERY SURVIVAL RUNWAY</div>
+                        <div class="kpi-body">
+                            <span id="kpiRunway" class="kpi-val text-orange">--</span>
+                            <span class="kpi-unit">Sols</span>
+                        </div>
+                        <div id="kpiBlackoutStatus" class="kpi-foot">Depletion status</div>
+                    </div>
+                </div>
+
+                <!-- Simulation Charts Row -->
+                <div class="charts-row">
+                    <!-- Diurnal Solar Curve -->
+                    <div class="panel chart-panel">
+                        <div class="chart-header">
+                            <div>
+                                <h3>Diurnal Solar Irradiance Curve (24 Sol-Hours)</h3>
+                                <p class="chart-desc">Beer-Lambert atmospheric transmission and diffuse forward-scatter flux.</p>
+                            </div>
+                            <span class="chart-badge">W/m² vs Local Sol Hour</span>
+                        </div>
+                        <div class="chart-canvas-wrapper">
+                            <canvas id="chartDiurnal"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Battery State-of-Charge & Power Balance -->
+                    <div class="panel chart-panel">
+                        <div class="chart-header">
+                            <div>
+                                <h3>Hourly Habitat Power & Battery State-of-Charge (SoC)</h3>
+                                <p id="batteryChartDesc" class="chart-desc">Shared habitat battery under active dust opacity.</p>
+                            </div>
+                            <span class="chart-badge">SoC % & Net kW</span>
+                        </div>
+                        <div class="chart-canvas-wrapper">
+                            <canvas id="chartBattery"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Annual Seasonal Variation Curve -->
+                <div class="panel chart-panel full-width">
+                    <div class="chart-header">
+                        <div>
+                            <h3>Annual Seasonal Insolation Curve (Mars Year: Ls 0° to 360°)</h3>
+                            <p class="chart-desc">Reflects orbital eccentricity (1.38 AU perihelion to 1.67 AU aphelion) and axial tilt declination.</p>
+                        </div>
+                        <span class="chart-badge">Noon Flux & Daily Energy Yield</span>
+                    </div>
+                    <div class="chart-canvas-wrapper-sm">
+                        <canvas id="chartSeasonal"></canvas>
+                    </div>
+                </div>
+
+                <!-- Risk Directives Panel -->
+                <div class="panel mitigation-panel">
+                    <div class="mitigation-header">
+                        <span class="mitigation-icon">⚡</span>
+                        <h3>Autonomous Environmental & Energy Risk Directives</h3>
+                    </div>
+                    <ul id="mitigationDirectivesList" class="mitigation-list">
+                        <li>Evaluating habitat energy reliability...</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- TAB 04: SCIENTIFIC WATER EVIDENCE LAB -->
+        <!-- ============================================================== -->
+        <section id="tab-water" class="tab-content">
+            <div class="water-lab-container">
+                <div class="water-header-panel panel">
+                    <div class="water-title-group">
+                        <span class="section-tag">EMPIRICAL PLANETARY SCIENCE</span>
+                        <h2>Scientific Water-Resource Potential Model</h2>
+                        <p>
+                            ASTREON replaces arbitrary manual water percentages with a multi-sensor empirical model
+                            grounded in MRO SHARAD shallow radar sounding, 2001 Mars Odyssey GRS neutron suppression,
+                            and MRO CRISM hyperspectral mineral hydration signatures.
+                        </p>
+                    </div>
+                    <div class="water-site-picker">
+                        <label for="waterSiteSelect">Analyze Target Settlement Zone:</label>
+                        <select id="waterSiteSelect" onchange="loadWaterEvidenceForSelected()">
+                            <!-- populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Deep Scientific Evidence Cards -->
+                <div class="evidence-grid">
+                    <!-- Radar Sounding SHARAD -->
+                    <div class="panel evidence-card">
+                        <div class="evidence-head">
+                            <span class="sensor-tag">RADAR SOUNDING</span>
+                            <h3>MRO SHARAD Dielectric Subsurface Profile</h3>
+                        </div>
+                        <div class="evidence-metric">
+                            <span class="evidence-val" id="evDielectric">--</span>
+                            <span class="evidence-unit">Dielectric Permittivity (ε')</span>
+                        </div>
+                        <p class="evidence-desc" id="evRadarSummary">Loading radar data...</p>
+                        <div class="evidence-meta">
+                            <span>Ice Purity: <strong id="evIcePurity" class="text-cyan">--%</strong></span>
+                            <span>Massive Slab Ice: <strong id="evSlabIce" class="text-green">--</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Odyssey GRS Neutron Spectrometer -->
+                    <div class="panel evidence-card">
+                        <div class="evidence-head">
+                            <span class="sensor-tag">EPITHERMAL NEUTRONS</span>
+                            <h3>Mars Odyssey GRS Water-Equivalent Hydrogen</h3>
+                        </div>
+                        <div class="evidence-metric">
+                            <span class="evidence-val text-cyan" id="evGrs">--</span>
+                            <span class="evidence-unit">wt% WEH (Top 1 Meter)</span>
+                        </div>
+                        <p class="evidence-desc">
+                            Direct measurement of cosmic ray-induced neutron leakage. Values above 7.0 wt% signify ubiquitous
+                            interstitial pore ice within the upper desiccated regolith.
+                        </p>
+                        <div class="evidence-meta">
+                            <span>Subsurface Hydrogen Grade: <strong id="evGrsGrade" class="text-green">--</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- CRISM Hyperspectral Mineralogy -->
+                    <div class="panel evidence-card">
+                        <div class="evidence-head">
+                            <span class="sensor-tag">HYPERSPECTRAL VNIR</span>
+                            <h3>CRISM Hydrated Mineral Absorption Bands</h3>
+                        </div>
+                        <div class="evidence-metric">
+                            <span class="evidence-val text-yellow" id="evCrism">--</span>
+                            <span class="evidence-unit">Hydration Index (0.0 to 1.0)</span>
+                        </div>
+                        <p class="evidence-desc">
+                            Identifies bound H₂O/OH vibration absorption bands at 1.4 µm, 1.9 µm, and 2.2 µm. Essential for clay-rich
+                            and polyhydrated sulfate deposits (e.g. smectites, gypsum).
+                        </p>
+                        <div class="evidence-meta">
+                            <span>Bound Mineral Water: <strong id="evCrismStatus" class="text-orange">--</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Engineering Extraction Feasibility -->
+                    <div class="panel evidence-card">
+                        <div class="evidence-head">
+                            <span class="sensor-tag">ISRU ENGINEERING</span>
+                            <h3>Specific Extraction Energy & Overburden</h3>
+                        </div>
+                        <div class="evidence-metric">
+                            <span class="evidence-val text-orange" id="evEnergy">--</span>
+                            <span class="evidence-unit">kWh per kg H₂O Extracted</span>
+                        </div>
+                        <p class="evidence-desc" id="evExtractionDesc">Loading engineering assessment...</p>
+                        <div class="evidence-meta">
+                            <span>Overburden Depth: <strong id="evOverburden">-- m</strong></span>
+                            <span>Method: <strong id="evMethod" class="text-cyan">--</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Radar Breakdown Chart & Extraction Methodology -->
+                <div class="water-details-row">
+                    <div class="panel water-radar-chart-panel">
+                        <div class="panel-header">
+                            <h3>Multi-Sensor Evidence Radar Evaluation</h3>
+                        </div>
+                        <div class="radar-chart-wrapper">
+                            <canvas id="chartWaterEvidence"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="panel extraction-details-panel">
+                        <div class="panel-header">
+                            <h3>ISRU Water Extraction Engineering Rationale</h3>
+                        </div>
+                        <div id="extractionRationaleContent" class="extraction-content">
+                            <!-- Populated dynamically -->
+                        </div>
+                        <div class="citations-box">
+                            <strong>Official Instrument Data Provenance:</strong>
+                            <ul id="waterCitationsList">
+                                <li>MRO SHARAD Shallow Radar (PDS Geosciences Node)</li>
+                                <li>2001 Mars Odyssey Gamma Ray Spectrometer / HEND</li>
+                                <li>MRO CRISM Visible & Infrared Spectrometer</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- TAB 05: LIFE SUPPORT CRISIS & FOOD RATIONING ENGINE -->
+        <!-- ============================================================== -->
+        <section id="tab-food" class="tab-content">
+            <div class="grid-layout-sidebar">
+                <!-- Food Crisis Left Input Controls -->
+                <div class="panel control-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <span class="section-tag text-orange">CONTINGENCY MANAGEMENT</span>
+                            <h2>Food Stockpile & Duration Crisis</h2>
+                        </div>
+                    </div>
+
+                    <p class="panel-intro-text">
+                        If food reserves are damaged/compromised, or if mission duration must be extended
+                        (e.g., Earth Return Vehicle window delay, global dust storm hold), this engine computes
+                        the exact metabolic rationing and survival schedule for the crew.
+                    </p>
+
+                    <div class="form-group-row">
+                        <div class="input-block">
+                            <label for="foodCrew">Crew Size</label>
+                            <input id="foodCrew" type="number" min="1" max="50" value="6" onchange="runFoodRationingCalculation()">
+                        </div>
+                        <div class="input-block">
+                            <label for="foodNominalDays">Nominal Duration (Sols)</label>
+                            <input id="foodNominalDays" type="number" min="10" max="1000" value="30" onchange="runFoodRationingCalculation()">
+                        </div>
+                    </div>
+
+                    <div class="form-group-row">
+                        <div class="input-block">
+                            <label for="foodExtendedDays" class="text-orange">New Extended Duration (Sols)</label>
+                            <input id="foodExtendedDays" type="number" min="10" max="1500" value="50" onchange="runFoodRationingCalculation()">
+                            <span id="foodExtensionHint" class="input-hint text-orange">+20 sols extension</span>
+                        </div>
+                        <div class="input-block">
+                            <label for="foodRemainingKg" class="text-orange">Remaining Food Stockpile (kg)</label>
+                            <input id="foodRemainingKg" type="number" min="10" max="5000" value="380" onchange="runFoodRationingCalculation()">
+                            <span class="input-hint">Dense NASA flight rations (4,200 kcal/kg)</span>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="section-subtitle"><span>BIOREGENERATIVE & PHYSIOLOGICAL INPUTS</span></div>
+                    <div class="form-group-row">
+                        <div class="input-block">
+                            <label for="foodGreenhouseYield">Greenhouse Yield (kg/day)</label>
+                            <input id="foodGreenhouseYield" type="number" min="0" max="20" step="0.5" value="1.5" onchange="runFoodRationingCalculation()">
+                            <span class="input-hint">Fresh microgreens/algae (600 kcal/kg)</span>
+                        </div>
+                        <div class="input-block">
+                            <label for="foodCrewWeight">Avg Astronaut Weight (kg)</label>
+                            <input id="foodCrewWeight" type="number" min="45" max="120" value="75" onchange="runFoodRationingCalculation()">
+                            <span class="input-hint">For BMR baseline calculation</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary-action" onclick="runFoodRationingCalculation()">
+                        <span>OPTIMIZE FOOD RATIONING PROTOCOL</span>
+                        <span class="btn-arrow">→</span>
+                    </button>
+                    <button class="btn-ghost-sm full-width" onclick="launchCascadeFromFood()" style="margin-top: 8px; width: 100%;">
+                        <span>⚡ MODEL FULL MULTI-SYSTEM CASCADE WITH THESE RATIONS</span>
+                    </button>
+
+                    <div class="rationing-preset-row">
+                        <span class="preset-label">Presets:</span>
+                        <button class="btn-preset" onclick="setFoodPreset('nominal')">Nominal (30d / 500kg)</button>
+                        <button class="btn-preset" onclick="setFoodPreset('moderate')">Mild Crisis (+15d / 350kg)</button>
+                        <button class="btn-preset text-red" onclick="setFoodPreset('severe')">Severe Emergency (+40d / 220kg)</button>
+                    </div>
+                </div>
+
+                <!-- Food Crisis Right Results Panel -->
+                <div class="results-container">
+                    <!-- Triage Severity Banner -->
+                    <div id="foodTriageBanner" class="triage-banner">
+                        <!-- Populated dynamically -->
+                    </div>
+
+                    <!-- Key Caloric KPIs -->
+                    <div class="kpi-cards-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-head">DAILY CALORIC CEILING</div>
+                            <div class="kpi-body">
+                                <span id="kpiFoodKcal" class="kpi-val text-cyan">--</span>
+                                <span class="kpi-unit">kcal/person/sol</span>
+                            </div>
+                            <div id="kpiFoodKcalDetail" class="kpi-foot">Nominal baseline: 2,800 kcal</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-head">DAILY DRY RATION</div>
+                            <div class="kpi-body">
+                                <span id="kpiFoodGrams" class="kpi-val text-yellow">--</span>
+                                <span class="kpi-unit">grams/person/sol</span>
+                            </div>
+                            <div id="kpiFoodGramsDetail" class="kpi-foot">Dry weight allocation</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-head">PROJECTED MASS LOSS</div>
+                            <div class="kpi-body">
+                                <span id="kpiFoodWeightLoss" class="kpi-val text-orange">--</span>
+                                <span class="kpi-unit">kg/person</span>
+                            </div>
+                            <div id="kpiFoodWeightPct" class="kpi-foot">--% of total body mass</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-head">FOOD RUNWAY AT NOMINAL</div>
+                            <div class="kpi-body">
+                                <span id="kpiFoodRunway" class="kpi-val text-green">--</span>
+                                <span class="kpi-unit">Sols</span>
+                            </div>
+                            <div id="kpiFoodRunwayDetail" class="kpi-foot">Stored food at 2,800 kcal</div>
+                        </div>
+                    </div>
+
+                    <!-- Caloric Deficit & Triage Trajectory Chart -->
+                    <div class="panel chart-panel">
+                        <div class="chart-header">
+                            <div>
+                                <h3>Caloric Allocation vs Basal Metabolic Safety Thresholds</h3>
+                                <p class="chart-desc">Compares available daily calories against NASA Astronaut survival tiers.</p>
+                            </div>
+                            <span class="chart-badge">kcal/person/sol</span>
+                        </div>
+                        <div class="chart-canvas-wrapper-sm">
+                            <canvas id="chartFoodTiers"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Phased Transition Plan Cards -->
+                    <div class="panel phased-plan-panel">
+                        <div class="panel-header">
+                            <h3>Phased Tactical Rationing Schedule</h3>
+                            <button class="btn-micro" onclick="printFoodDirective()">🖨 Export Mission Directive</button>
+                        </div>
+                        <div id="foodPhasesContainer" class="phases-timeline"></div>
+                    </div>
+
+                    <!-- Actionable Medical & Task Guidelines -->
+                    <div class="panel directives-panel">
+                        <div class="panel-header">
+                            <span class="mitigation-icon">🩺</span>
+                            <h3>Flight Surgeon & Life Support Guidelines</h3>
+                        </div>
+                        <ul id="foodGuidelinesList" class="guidelines-list">
+                            <li>Generating survival directives...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- TAB 06: DOMINO ENGINE - MULTI-SOL COMPOUND CRISIS CASCADER -->
+        <!-- ============================================================== -->
+        <section id="tab-cascade" class="tab-content">
+            <!-- Top Survival Runway Hero Banner -->
+            <div class="cascade-hero-banner">
+                <div class="runway-hero-left">
+                    <span class="section-tag">UNIFIED MISSION SURVIVAL HORIZON</span>
+                    <div class="runway-main-display">
+                        <span id="cascadeRunwayValue" class="runway-huge-number">60</span>
+                        <div class="runway-meta">
+                            <span class="runway-unit">SOLS SURVIVAL RUNWAY</span>
+                            <span id="cascadeRunwayStatus" class="runway-status-badge">OPTIMAL SUSTAINED MISSION</span>
+                        </div>
+                    </div>
+                    <div id="cascadeBottleneckBadge" class="bottleneck-pill">
+                        <span class="pill-title">PRIMARY BOTTLENECK:</span>
+                        <span id="cascadeBottleneckText" class="pill-value">NONE - ALL SYSTEMS SUSTAINABLE</span>
+                    </div>
+                </div>
+
+                <div class="runway-hero-subsystems">
+                    <!-- Power Runway -->
+                    <div class="subsystem-runway-card">
+                        <div class="sub-head"><span class="icon">⚡</span> POWER GRID</div>
+                        <div class="sub-val" id="cardPowerRunway">100% SoC</div>
+                        <div class="sub-sub" id="cardPowerStatus">0 Blackout Sols</div>
+                    </div>
+                    <!-- Oxygen Runway -->
+                    <div class="subsystem-runway-card">
+                        <div class="sub-head"><span class="icon">🫁</span> OXYGEN (MOXIE)</div>
+                        <div class="sub-val" id="cardO2Runway">150.0 kg</div>
+                        <div class="sub-sub" id="cardO2Status">Buffer Maintained</div>
+                    </div>
+                    <!-- Water Runway -->
+                    <div class="subsystem-runway-card">
+                        <div class="sub-head"><span class="icon">💧</span> WATER (ISRU)</div>
+                        <div class="sub-val" id="cardWaterRunway">3,500 L</div>
+                        <div class="sub-sub" id="cardWaterStatus">90% Closed Loop</div>
+                    </div>
+                    <!-- Food & Weight Loss -->
+                    <div class="subsystem-runway-card">
+                        <div class="sub-head"><span class="icon">🍽️</span> FOOD & METABOLISM</div>
+                        <div class="sub-val" id="cardFoodRunway">800 kg</div>
+                        <div class="sub-sub" id="cardWeightLoss">0.0% Weight Loss</div>
+                    </div>
+                    <!-- Radiation Exposure -->
+                    <div class="subsystem-runway-card">
+                        <div class="sub-head"><span class="icon">☢️</span> RAD ACCUMULATOR</div>
+                        <div class="sub-val" id="cardRadRunway">32.4 mSv</div>
+                        <div class="sub-sub" id="cardRadLimit">13.0% of 30d Limit</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cascade Body Grid: Controls, Charts, Events -->
+            <div class="cascade-grid-layout">
+                <!-- Left Control Panel: Crisis Scenario & Countermeasure Interventions -->
+                <div class="panel cascade-control-panel">
+                    <div class="panel-header">
+                        <div class="panel-title-group">
+                            <span class="section-tag">SIMULATION CONFIGURATION</span>
+                            <h2>Compound Crisis Parameters</h2>
+                        </div>
+                    </div>
+
+                    <div class="form-group-block">
+                        <label for="cascadeSiteSelect">Target Settlement Zone</label>
+                        <select id="cascadeSiteSelect" onchange="runCascadeSimulation()">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group-row">
+                        <div class="input-block">
+                            <label for="cascadeCrewInput">Crew Size</label>
+                            <input id="cascadeCrewInput" type="number" min="1" max="24" value="6" onchange="runCascadeSimulation()">
+                        </div>
+                        <div class="input-block">
+                            <label for="cascadeTimelineInput">Timeline (Sols)</label>
+                            <input id="cascadeTimelineInput" type="number" min="10" max="180" step="5" value="60" onchange="runCascadeSimulation()">
+                        </div>
+                    </div>
+
+                    <div class="form-group-block">
+                        <label for="cascadeScenarioSelect">Environmental Shock / Dust Storm</label>
+                        <select id="cascadeScenarioSelect" onchange="runCascadeSimulation()">
+                            <option value="none">Nominal Clear Sky (No Storm, τ=0.38)</option>
+                            <option value="regional">Regional Dust Inflow (Peak τ=1.8)</option>
+                            <option value="global_pede" selected>Global Planet-Encircling Storm [PEDE] (Peak τ=4.5)</option>
+                            <option value="extreme_pede">Severe Global PEDE (Extreme τ=6.2)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group-row">
+                        <div class="input-block">
+                            <label for="cascadeStartSolInput">Storm Start Sol</label>
+                            <input id="cascadeStartSolInput" type="number" min="1" max="60" value="5" onchange="runCascadeSimulation()">
+                        </div>
+                        <div class="input-block">
+                            <label for="cascadeDurationInput">Storm Duration</label>
+                            <input id="cascadeDurationInput" type="number" min="10" max="120" value="35" onchange="runCascadeSimulation()">
+                        </div>
+                    </div>
+
+                    <!-- Countermeasure Toggles & Hardware Options -->
+                    <div class="countermeasure-section">
+                        <span class="section-tag">ENGINEERING COUNTERMEASURES</span>
+                        
+                        <label class="toggle-card">
+                            <input id="toggleNuclear" type="checkbox" onchange="runCascadeSimulation()">
+                            <div class="toggle-text">
+                                <span class="toggle-title">⚡ 10 kW Kilopower Auxiliary Nuclear Unit</span>
+                                <span class="toggle-sub">Adds 10 kW (~246 kWh/sol) on top of the habitat config, independent of dust.</span>
+                            </div>
+                        </label>
+
+                        <label class="toggle-card">
+                            <input id="toggleDustCleaners" type="checkbox" onchange="runCascadeSimulation()">
+                            <div class="toggle-text">
+                                <span class="toggle-title">🧹 Electrostatic Dust Repulsion & Wiper Arrays</span>
+                                <span class="toggle-sub">Caps panel dust loss at 6% (instead of 45% degradation).</span>
+                            </div>
+                        </label>
+
+                        <label class="toggle-card">
+                            <input id="toggleShelter" type="checkbox" checked onchange="runCascadeSimulation()">
+                            <div class="toggle-text">
+                                <span class="toggle-title">🛡️ Regolith Storm Shelter Protocol (SPE Protection)</span>
+                                <span class="toggle-sub">Hunkers crew under 50cm regolith; cuts solar flare dose by 92%.</span>
+                            </div>
+                        </label>
+
+                        <label class="toggle-card">
+                            <input id="toggleGreenhouse" type="checkbox" checked onchange="runCascadeSimulation()">
+                            <div class="toggle-text">
+                                <span class="toggle-title">🌿 Bioregenerative Hydroponic Greenhouse</span>
+                                <span class="toggle-sub">Supplies 2,100 fresh kcal/sol (sheds when battery &lt; 40%).</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="form-group-block" style="margin-top: 12px;">
+                        <label for="cascadeRationingSelect">Caloric Rationing Policy</label>
+                        <select id="cascadeRationingSelect" onchange="runCascadeSimulation()">
+                            <option value="auto_adaptive" selected>Auto-Adaptive Multi-Stage Rationing (Smart Horizon)</option>
+                            <option value="nominal">Forced Nominal (2,800 kcal/person/sol)</option>
+                            <option value="conservation">Forced Conservation (2,100 kcal/person/sol)</option>
+                            <option value="survival">Forced Critical Survival (1,550 kcal/person/sol)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group-row">
+                        <div class="input-block">
+                            <label for="cascadeBatteryInput">Battery Buffer (kWh)</label>
+                            <input id="cascadeBatteryInput" type="number" min="50" max="1000" step="25" value="250" onchange="runCascadeSimulation()">
+                        </div>
+                        <div class="input-block">
+                            <label for="cascadeFoodInput">Stored Food (kg)</label>
+                            <input id="cascadeFoodInput" type="number" min="50" max="3000" step="50" value="800" onchange="runCascadeSimulation()">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary-action" onclick="runCascadeSimulation()" style="margin-top: 16px;">
+                        <span>⚡ RE-EXECUTE COMPOUND SIMULATION</span>
+                        <span class="btn-arrow">→</span>
+                    </button>
+                    <button class="btn-ghost-sm" onclick="exportCascadeBriefing()" style="margin-top: 8px; width: 100%;">
+                        🖨 Export Incident Briefing Checklist
+                    </button>
+                </div>
+
+                <!-- Center: Interactive Multi-Sol Charts & Interactive Sol Scrubber -->
+                <div class="cascade-center-panel">
+                    <!-- Interactive Sol Scrubber Card -->
+                    <div class="panel scrubber-panel">
+                        <div class="scrubber-header">
+                            <div class="scrubber-title">
+                                <span class="section-tag">LIVE FORWARD SCRUBBER</span>
+                                <h3>Inspect Sol <span id="scrubberSolLabel" class="text-cyan">Sol 1</span> Telemetry</h3>
+                            </div>
+                            <div id="scrubberTierBadge" class="tier-pill tier-0">Tier 0: Nominal ECLSS</div>
+                        </div>
+
+                        <div class="scrubber-slider-container">
+                            <input id="cascadeSolSlider" type="range" min="1" max="60" value="1" oninput="onCascadeSolScrub(this.value)">
+                            <div class="scrubber-ticks">
+                                <span>Sol 1</span>
+                                <span id="scrubberMidTick">Sol 30</span>
+                                <span id="scrubberMaxTick">Sol 60</span>
+                            </div>
+                        </div>
+
+                        <!-- Scrubber Instant Telemetry HUD Grid -->
+                        <div class="scrubber-hud-grid">
+                            <div class="hud-item">
+                                <span class="hud-label">Solar Dust (τ)</span>
+                                <span id="hudTau" class="hud-val text-yellow">0.38</span>
+                            </div>
+                            <div class="hud-item">
+                                <span class="hud-label">Power Available</span>
+                                <span id="hudPowerAvail" class="hud-val text-cyan">-- kWh</span>
+                            </div>
+                            <div class="hud-item">
+                                <span class="hud-label">Battery SoC</span>
+                                <span id="hudBatterySoc" class="hud-val text-green">100%</span>
+                            </div>
+                            <div class="hud-item">
+                                <span class="hud-label">Water Reserve</span>
+                                <span id="hudWater" class="hud-val text-blue">3,500 L</span>
+                            </div>
+                            <div class="hud-item">
+                                <span class="hud-label">Oxygen Buffer</span>
+                                <span id="hudO2" class="hud-val text-teal">150 kg</span>
+                            </div>
+                            <div class="hud-item">
+                                <span class="hud-label">Rations Intake</span>
+                                <span id="hudKcal" class="hud-val text-orange">2,800 kcal</span>
+                            </div>
+                            <div class="hud-item">
+                                <span class="hud-label">Weight Loss</span>
+                                <span id="hudWeight" class="hud-val">0.0%</span>
+                            </div>
+                            <div class="hud-item">
+                                <span class="hud-label">Cumulative Rad</span>
+                                <span id="hudRad" class="hud-val text-pink">0.5 mSv</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cascading Charts -->
+                    <div class="cascade-charts-wrapper">
+                        <!-- Chart 1: Power & Battery Dynamic Curve -->
+                        <div class="panel chart-panel">
+                            <div class="chart-header">
+                                <div>
+                                    <h3>1. Power Generation, Load Shedding & Battery SoC</h3>
+                                    <p class="chart-desc">Tracks solar PV output, thermal heat demand, and 4-tier load shedding triggers.</p>
+                                </div>
+                                <span class="chart-badge">kWh / sol vs Battery %</span>
+                            </div>
+                            <div class="chart-canvas-wrapper" style="height: 240px;">
+                                <canvas id="chartCascadePower"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart 2: Life Support Consumables -->
+                        <div class="panel chart-panel" style="margin-top: 16px;">
+                            <div class="chart-header">
+                                <div>
+                                    <h3>2. Life Support Buffers: Water, Oxygen & Food Stockpile</h3>
+                                    <p class="chart-desc">Depletion rates when ISRU wells and MOXIE are shed to preserve core habitat heat.</p>
+                                </div>
+                                <span class="chart-badge">Liters (L) & Kilograms (kg)</span>
+                            </div>
+                            <div class="chart-canvas-wrapper" style="height: 220px;">
+                                <canvas id="chartCascadeResources"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Chart 3: Crew Health & Cumulative Hazards -->
+                        <div class="panel chart-panel" style="margin-top: 16px;">
+                            <div class="chart-header">
+                                <div>
+                                    <h3>3. Astronaut Metabolic Deficit, Weight Loss & Radiation</h3>
+                                    <p class="chart-desc">Physiological degradation timeline against NASA Medical Class II survival thresholds.</p>
+                                </div>
+                                <span class="chart-badge">Weight Loss % vs mSv vs kcal</span>
+                            </div>
+                            <div class="chart-canvas-wrapper" style="height: 220px;">
+                                <canvas id="chartCascadePhysiology"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Chronological Cascading Milestones & FDIR Procedures -->
+                <div class="cascade-right-panel">
+                    <!-- Events Stream -->
+                    <div class="panel events-panel">
+                        <div class="panel-header">
+                            <div class="panel-title-group">
+                                <span class="section-tag">FAULT DETECTION & RESPONSE</span>
+                                <h3>Cascading Event Log</h3>
+                            </div>
+                            <span id="eventsCountBadge" class="badge-micro">0 Events</span>
+                        </div>
+                        <div id="cascadeEventsList" class="cascade-events-feed">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Tactical Countermeasure Impact Analysis -->
+                    <div class="panel countermeasures-panel" style="margin-top: 16px;">
+                        <div class="panel-header">
+                            <span class="mitigation-icon">🛠️</span>
+                            <h3>Countermeasure Impacts <small class="text-cyan">(re-simulated)</small></h3>
+                        </div>
+                        <div id="countermeasuresList" class="countermeasure-cards-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- STAGE 03: CRISIS MODE — one screen, computed locally          -->
+        <!-- ============================================================== -->
+        <section id="tab-crisis" class="tab-content">
+            <div class="crisis-layout">
+                <div class="panel crisis-controls">
+                    <div class="crisis-controls-grid">
+                        <div class="form-group-block">
+                            <label for="crisisSite">Current base</label>
+                            <select id="crisisSite" onchange="runCrisisAssessment()"></select>
+                        </div>
+                        <div class="form-group-block">
+                            <label for="crisisScenario">Threat</label>
+                            <select id="crisisScenario" onchange="runCrisisAssessment()">
+                                <option value="regional" selected>Regional dust storm (τ≈1.8)</option>
+                                <option value="global_pede">Global dust storm (τ≈4.5, like 2018)</option>
+                                <option value="extreme_pede">Severe global storm (τ≈6.2)</option>
+                                <option value="none">No storm — seasonal check only</option>
+                            </select>
+                        </div>
+                        <div class="form-group-block">
+                            <label for="crisisStart">Storm arrives on sol</label>
+                            <input id="crisisStart" type="number" min="1" max="60" value="5" onchange="runCrisisAssessment()">
+                        </div>
+                        <div class="form-group-block">
+                            <label for="crisisDuration">Storm lasts (sols)</label>
+                            <input id="crisisDuration" type="number" min="5" max="150" value="35" onchange="runCrisisAssessment()">
+                        </div>
+                        <div class="form-group-block">
+                            <label for="crisisTransport">Evacuation vehicle</label>
+                            <select id="crisisTransport" onchange="runCrisisAssessment()">
+                                <option value="habitat" selected>Habitat setting</option>
+                                <option value="21">Pressurized rover (21-sol endurance)</option>
+                                <option value="45">Long-range convoy (45 sols)</option>
+                                <option value="90">Pre-planned migration (90 sols)</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary-action compact" onclick="runCrisisAssessment()">⚡ ASSESS NOW</button>
+                    </div>
+                    <p class="crisis-offline-note">Computed on this machine in under a second. No Earth link needed: the crew gets an answer before a message could even reach Earth.</p>
+                </div>
+
+                <div id="crisisHero" class="crisis-hero level-unknown">
+                    <div class="crisis-hero-main">
+                        <span class="section-tag">SURVIVAL RUNWAY · <span id="crisisSiteName">--</span></span>
+                        <div class="crisis-runway-row">
+                            <span id="crisisRunway" class="crisis-runway-num">--</span>
+                            <div class="crisis-runway-meta">
+                                <span id="crisisRunwayOf" class="crisis-runway-of">of -- sols</span>
+                                <span id="crisisLevel" class="crisis-level-badge">ASSESSING…</span>
+                            </div>
+                        </div>
+                        <div id="crisisLimiting" class="crisis-limiting">--</div>
+                        <div id="crisisBest" class="crisis-best">--</div>
+                    </div>
+                    <div class="crisis-hero-link">
+                        <span class="section-tag">EARTH LINK</span>
+                        <div id="crisisDelay" class="crisis-delay">-- min</div>
+                        <div id="crisisDelaySub" class="crisis-delay-sub">one-way light time</div>
+                        <div id="crisisConj" class="crisis-conj">--</div>
+                    </div>
+                </div>
+
+                <div class="crisis-body">
+                    <div class="panel crisis-actions-panel">
+                        <div class="panel-header">
+                            <div class="panel-title-group">
+                                <span class="section-tag">DO THIS, IN THIS ORDER</span>
+                                <h2>Recommended actions</h2>
+                            </div>
+                        </div>
+                        <ol id="crisisActions" class="crisis-actions"><li>Assessing…</li></ol>
+                        <div class="crisis-chart-wrap"><canvas id="chartCrisis"></canvas></div>
+                    </div>
+
+                    <div class="crisis-side">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div class="panel-title-group">
+                                    <span class="section-tag">WHERE CAN WE GO?</span>
+                                    <h3>Evacuation destinations</h3>
+                                </div>
+                                <span id="crisisRange" class="badge-micro">range --</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="astreon-table crisis-table">
+                                    <thead><tr><th>Destination</th><th>Distance</th><th>Transit</th><th>Storm there</th><th>Verdict</th></tr></thead>
+                                    <tbody id="crisisDestinations"><tr><td colspan="5">--</td></tr></tbody>
+                                </table>
+                            </div>
+                            <ul id="crisisAssumptions" class="crisis-assumptions"></ul>
+                        </div>
+
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div class="panel-title-group">
+                                    <span class="section-tag">WHAT EACH OPTION BUYS (RE-SIMULATED)</span>
+                                    <h3>Procedure what-ifs</h3>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="astreon-table crisis-table">
+                                    <thead><tr><th>Option</th><th>Runway</th><th>Δ sols</th><th>Blackout sols</th><th>Min battery</th></tr></thead>
+                                    <tbody id="crisisWhatIfs"><tr><td colspan="5">--</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- TAB 07: NASA OPEN DATA & IN-SITU ROVER EXPLORER -->
+        <!-- ============================================================== -->
+        <section id="tab-nasa" class="tab-content">
+            <div class="nasa-hub-container">
+                <!-- Weather Widget & API Connectivity -->
+                <div class="nasa-hub-top-grid">
+                    <!-- Live Weather Telemetry -->
+                    <div class="panel weather-panel">
+                        <div class="panel-header">
+                            <div>
+                                <span class="section-tag">API.NASA.GOV</span>
+                                <h3>Mars Surface Weather Station (InSight / REMS)</h3>
+                            </div>
+                            <span id="weatherSourceBadge" class="chart-badge">CHECKING…</span>
+                        </div>
+                        <p id="weatherSourceNote" class="chart-desc" style="margin:-6px 0 12px;">Loading source…</p>
+                        <div class="weather-metrics-grid">
+                            <div class="weather-card">
+                                <div class="w-label">AVG SURFACE TEMP</div>
+                                <div id="wTempAvg" class="w-val text-cyan">-62.4° C</div>
+                                <div id="wTempRange" class="w-sub">Min: -96°C | Max: -14°C</div>
+                            </div>
+                            <div class="weather-card">
+                                <div class="w-label">ATMOSPHERIC PRESSURE</div>
+                                <div id="wPressure" class="w-val text-yellow">745 Pa</div>
+                                <div class="w-sub">Thinner than 1% Earth sea level</div>
+                            </div>
+                            <div class="weather-card">
+                                <div class="w-label">WIND VELOCITY</div>
+                                <div id="wWind" class="w-val text-green">4.8 m/s</div>
+                                <div id="wWindDir" class="w-sub">Direction: 285° (W)</div>
+                            </div>
+                            <div class="weather-card">
+                                <div class="w-label">CURRENT MARTIAN SOL</div>
+                                <div id="wSol" class="w-val text-orange">Sol 1428</div>
+                                <div id="wSeason" class="w-sub">Ls 164° (Late Summer)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NASA Data Portal Integration Links -->
+                    <div class="panel links-panel">
+                        <div class="panel-header">
+                            <span class="section-tag">OFFICIAL REPOSITORIES</span>
+                            <h3>Integrated NASA Data Portals</h3>
+                        </div>
+                        <div class="portal-links-list">
+                            <a href="https://data.nasa.gov/" target="_blank" class="portal-link-item">
+                                <div class="portal-icon">📁</div>
+                                <div>
+                                    <strong>data.nasa.gov</strong>
+                                    <p>Planetary Data System (PDS), MOLA Topography, GRS Hydrogen, and CRISM catalogs.</p>
+                                </div>
+                                <span class="link-arrow">↗</span>
+                            </a>
+                            <a href="https://code.nasa.gov/" target="_blank" class="portal-link-item">
+                                <div class="portal-icon">💻</div>
+                                <div>
+                                    <strong>code.nasa.gov</strong>
+                                    <p>NASA SPICE ephemeris toolkit, Ames Mars GCM climate models, and ION DTN software.</p>
+                                </div>
+                                <span class="link-arrow">↗</span>
+                            </a>
+                            <a href="https://api.nasa.gov/" target="_blank" class="portal-link-item">
+                                <div class="portal-icon">⚡</div>
+                                <div>
+                                    <strong>api.nasa.gov</strong>
+                                    <p>InSight Mars Weather, Mars Rover Imagery, and Astronomy assets REST APIs.</p>
+                                </div>
+                                <span class="link-arrow">↗</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mars Rover Surface Visual Verification -->
+                <div class="panel rover-photos-panel">
+                    <div class="panel-header">
+                        <div>
+                            <span class="section-tag">SURFACE VISUAL CONFIRMATION</span>
+                            <h3>Mars Rover Photography for Candidate Landing Terrain Inspection</h3>
+                            <p class="chart-desc">Ground-truth visual confirmation from NASA's Perseverance and Curiosity rovers.</p>
+                        </div>
+                        <div class="rover-toggle-group">
+                            <button class="btn-micro active" id="btnRoverPerseverance" onclick="loadRoverPhotos('perseverance')">Perseverance (Jezero)</button>
+                            <button class="btn-micro" id="btnRoverCuriosity" onclick="loadRoverPhotos('curiosity')">Curiosity (Gale)</button>
+                        </div>
+                    </div>
+                    <div id="roverPhotosGrid" class="rover-photos-grid">
+                        <div class="loading-state">Fetching rover surface photography...</div>
+                    </div>
+                </div>
+
+                <!-- Open Datasets Registry Table -->
+                <div class="panel datasets-table-panel">
+                    <div class="panel-header">
+                        <span class="section-tag">CATALOG AUDIT</span>
+                        <h3>data.nasa.gov & code.nasa.gov Asset Registry</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="astreon-table">
+                            <thead>
+                                <tr>
+                                    <th>Asset Title</th>
+                                    <th>Source Portal</th>
+                                    <th>Category</th>
+                                    <th>Role in ASTREON Engine</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nasaDatasetsTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- TAB 07: INTERPLANETARY DTN COMMUNICATIONS -->
+        <!-- ============================================================== -->
+        <section id="tab-comm" class="tab-content">
+            <div class="panel comm-panel">
+                <div class="panel-header">
+                    <div>
+                        <span class="section-tag">NASA ION PROTOCOL</span>
+                        <h2>Delay/Disruption Tolerant Networking (DTN) Simulator</h2>
+                        <p>Simulates Mars-to-Earth speed-of-light propagation latency and store-and-forward bundle custody.</p>
+                    </div>
+                    <div class="comm-status-indicator">
+                        <span id="commStatusBadge" class="status-badge live">LINK ONLINE</span>
+                    </div>
+                </div>
+
+                <!-- Comm Visual Diagram -->
+                <div class="network-topology-diagram">
+                    <div class="topo-node active" id="nodeAstronaut">
+                        <div class="node-icon">🧑‍🚀</div>
+                        <div class="node-title">ASTRONAUT EVA</div>
+                        <div class="node-sub">UHF Short-Range</div>
+                    </div>
+                    <div class="topo-beam active"></div>
+                    <div class="topo-node active" id="nodeHab">
+                        <div class="node-icon">🏛️</div>
+                        <div class="node-title">MARS HABITAT</div>
+                        <div class="node-sub">Local Custody Buffer</div>
+                    </div>
+                    <div class="topo-beam active"></div>
+                    <div class="topo-node active" id="nodeRelay">
+                        <div class="node-icon">🛰️</div>
+                        <div class="node-title">MRO / TGO RELAY</div>
+                        <div class="node-sub">Areostationary X-Band</div>
+                    </div>
+                    <div class="topo-beam active" id="beamInterplanetary"></div>
+                    <div class="topo-node active" id="nodeEarth">
+                        <div class="node-icon">🌍</div>
+                        <div class="node-title">EARTH DSN</div>
+                        <div class="node-sub">Goldstone / Madrid</div>
+                    </div>
+                </div>
+
+                <div class="comm-controls-grid">
+                    <div class="comm-latency-box">
+                        <div class="latency-label">ONE-WAY SPEED-OF-LIGHT LATENCY</div>
+                        <div id="commLatencyDisplay" class="latency-val text-cyan">-- min</div>
+                        <div id="commDistDisplay" class="latency-sub">Computing Earth–Mars geometry…</div>
+                        <label for="commDayOffset" class="latency-sub" style="display:block;margin-top:10px;">Date: <span id="commDateLabel" class="text-orange">today</span></label>
+                        <input id="commDayOffset" type="range" min="0" max="780" step="5" value="0" oninput="updateCommGeometry()" style="width:100%;">
+                    </div>
+
+                    <div class="comm-input-box">
+                        <label for="commMessageInput">Interplanetary Telemetry Payload:</label>
+                        <div class="input-with-button">
+                            <input id="commMessageInput" type="text" value="ASTREON telemetry sol 30: Life support nominal, water extraction yield 140 L/sol.">
+                            <button class="btn-primary-action compact" onclick="sendDtnTelemetry()">TRANSMIT BUNDLE</button>
+                        </div>
+                        <div class="comm-toggle-row">
+                            <button id="btnToggleLink" class="btn-secondary-action" onclick="toggleEarthLink()">SIMULATE LINK DISRUPTION</button>
+                            <span id="linkDesc" class="link-desc text-green">Direct line-of-sight established.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Telemetry Bundle Log -->
+                <div class="bundle-log-box">
+                    <div class="log-header">
+                        <h4>DTN Bundle Transmission Log</h4>
+                        <button class="btn-micro" onclick="clearCommLog()">Clear Log</button>
+                    </div>
+                    <div id="commLogStream" class="log-stream">
+                        <div class="log-entry sys">[SYSTEM] DTN bundle router initialized using NASA code.nasa.gov ION architecture.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- SHARED HABITAT CONFIGURATION MODAL -->
+    <div id="habitatModal" class="modal-backdrop hidden">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-header">
+                <h3>Habitat configuration (shared by every module)</h3>
+                <button class="btn-close" onclick="closeHabitatModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="chart-desc" style="margin-bottom:12px;">Ranking, Stress Test, Solar &amp; Power, Food and Crisis Mode all read these values, so every screen describes the same base.</p>
+                <div id="habitatForm" class="habitat-form-grid"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-ghost-sm" onclick="resetHabitat()">Reset defaults</button>
+                <button class="btn-ghost-sm" onclick="closeHabitatModal()">Cancel</button>
+                <button class="btn-primary-action compact" onclick="saveHabitat()">APPLY EVERYWHERE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NASA API KEY SETTINGS MODAL -->
+    <div id="nasaKeyModal" class="modal-backdrop hidden">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>NASA API Key Configuration</h3>
+                <button class="btn-close" onclick="closeNasaModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Enter your personal NASA API key from <a href="https://api.nasa.gov/" target="_blank">api.nasa.gov</a>.
+                    A personal key provides up to 1,000 requests/hour (DEMO_KEY is capped at 30/hour).
+                </p>
+                <div class="input-block">
+                    <label for="inputNasaKey">NASA API Key:</label>
+                    <input id="inputNasaKey" type="text" placeholder="Enter API Key or DEMO_KEY" value="DEMO_KEY">
+                </div>
+                <div id="nasaKeyFeedback" class="key-feedback hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-ghost-sm" onclick="closeNasaModal()">Cancel</button>
+                <button class="btn-primary-action compact" onclick="saveNasaApiKey()">VERIFY & SAVE KEY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESERVATION REGISTRY MODAL -->
+    <div id="reservationsModal" class="modal-backdrop hidden">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-header">
+                <h3>Mars Settlement Registry (SQLite Database)</h3>
+                <button class="btn-close" onclick="closeReservationsModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="astreon-table">
+                        <thead>
+                            <tr>
+                                <th>Mission ID</th>
+                                <th>Settlement Zone</th>
+                                <th>Crew</th>
+                                <th>Duration</th>
+                                <th>Daily Ration</th>
+                                <th>Status</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reservationsTableBody">
+                            <tr><td colspan="7">Loading reservations...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary-action compact" onclick="closeReservationsModal()">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIRM RESERVATION MODAL -->
+    <div id="confirmReserveModal" class="modal-backdrop hidden">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Confirm Settlement Zone Reservation</h3>
+                <button class="btn-close" onclick="closeConfirmModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="confirmDetailsContent">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-ghost-sm" onclick="closeConfirmModal()">Cancel</button>
+                <button class="btn-primary-action compact" onclick="executeReservation()">AUTHORIZE SETTLEMENT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+        <div>ASTREON • Mars Mission Site Intelligence Platform</div>
+        <div class="footer-links">
+            <a href="https://data.nasa.gov/" target="_blank">data.nasa.gov</a> • 
+            <a href="https://code.nasa.gov/" target="_blank">code.nasa.gov</a> • 
+            <a href="https://api.nasa.gov/" target="_blank">api.nasa.gov</a>
+        </div>
+        <div>NASA Space Apps Challenge Advanced Aerospace System</div>
+    </footer>
+
+    <!-- Chart.js & Leaflet JS (bundled locally) -->
+    <script src="{{ url_for('static', filename='vendor/chart.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/leaflet.js') }}"></script>
+    <!-- Main Application Logic -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/crisis.js') }}"></script>
+</body>
+</html>
