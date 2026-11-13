@@ -1,4 +1,4 @@
-﻿# ASTREON — Mission Match Mars
+# ASTREON — Mission Match Mars
 ### NASA Space Apps Challenge 2026
 
 > **Advanced Planetary Decision Support & Mission Site Intelligence Platform for Human Settlement Selection, Solar/Environmental Risk Telemetry, and Life-Support Contingency Management.**
@@ -105,8 +105,8 @@ This automatically launches the local server and opens the application in your d
 ### Option B: Terminal Command (Cross-Platform)
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/nusratjannat08/Mission_Match_Mars.git
-   cd Mission_Match_Mars
+   git clone https://github.com/nusratjannat08/ASTREON.git
+   cd ASTREON
    ```
 2. **Install dependencies:**
    ```bash
@@ -126,7 +126,7 @@ This automatically launches the local server and opens the application in your d
 ## 📁 Project Architecture
 
 ```
-Mission_Match_Mars/
+ASTREON/
 ├── app.py                     # Flask server with REST API routes & SQLite persistence
 ├── scientific_engine.py       # Core physics: Water potential, Solar/Dust/Power, Domino cascade
 ├── nasa_client.py             # Client for api.nasa.gov, data.nasa.gov & code.nasa.gov
